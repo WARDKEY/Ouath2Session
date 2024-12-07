@@ -2,9 +2,12 @@ package spring.oauth2session.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import spring.oauth2session.OAuth2.CustomCLientRegistrationRepository;
+import spring.oauth2session.OAuth2.CustomOAuth2AuthorizedClientService;
 import spring.oauth2session.service.CustomOAuth2UserService;
 
 @Configuration
@@ -12,9 +15,18 @@ import spring.oauth2session.service.CustomOAuth2UserService;
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomCLientRegistrationRepository customCLientRegistrationRepository;
+    private final CustomOAuth2AuthorizedClientService customOAuth2AuthrorizedClientService;
+    private final JdbcTemplate jdbcTemplate;
 
-    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService) {
+    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
+                          CustomCLientRegistrationRepository customCLientRegistrationRepository,
+                          CustomOAuth2AuthorizedClientService customOAuth2AuthrorizedClientService,
+                          JdbcTemplate jdbcTemplate) {
         this.customOAuth2UserService = customOAuth2UserService;
+        this.customCLientRegistrationRepository = customCLientRegistrationRepository;
+        this.customOAuth2AuthrorizedClientService = customOAuth2AuthrorizedClientService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Bean
@@ -36,9 +48,15 @@ public class SecurityConfig {
         // oauth2Login과 oauth2Client가 있는데 Client는 custom 해줘야 됨
         // 현재는 커스텀 설정을 default로 설정 나중에 userDetailsService를 등록하면 람다식으로 등록 가능
         // EndPoint는 데이터를 받을 수 있는 UserDetailsService를 등록해준다는 뜻
+        // clientRegistrationRepository 등록
+        // authoricedClientService
         http
                 .oauth2Login((oauth2) -> oauth2
                         .loginPage("/login")
+                        .clientRegistrationRepository(customCLientRegistrationRepository.clientRegistrationRepository())
+                        .authorizedClientService(
+                                customOAuth2AuthrorizedClientService.oAuth2AuthorizedClientService(jdbcTemplate,
+                                        customCLientRegistrationRepository.clientRegistrationRepository()))
                         .userInfoEndpoint((userInfoEndpointConfig) ->
                                 userInfoEndpointConfig.userService(customOAuth2UserService)));
 
